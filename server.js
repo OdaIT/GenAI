@@ -35,8 +35,6 @@ async function callGemini(userPrompt) {
 }
 
 
-
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -86,7 +84,6 @@ app.post('/api/tasks/create', async (req, res) => {
                 error: 'Text is required and must be a non-empty string'
             });
         }
-
 
         const task = await createTaskFromText(text.trim());
 
@@ -192,14 +189,15 @@ app.get('/', (req, res) => {
         success: true,
         message: 'AI Task System API',
         endpoints: [
-            'POST /api/tasks/create - Create task from text'
+            'POST /api/tasks/create - Create task from text',
+            'POST /api/tasks/refine - Refine existing task',
+            'POST /api/tasks/suggest-tags - Suggest tags for task',
+            'POST /api/tasks/summarize - Summarize task description'
         ]
     });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 AI Task System API running on port ${PORT}`);
-    console.log(`📖 Environment: ${process.env.NODE_ENV}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    console.log(`GenAI running on http://localhost:${PORT}/`);
 });
