@@ -14,17 +14,44 @@ if (!process.env.GEMINI_API_KEY) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+//formato JSON
+const jsonFormat =`
+  Retorna o JSON neste formato:
+{
+  "title": "título conciso e profissional",
+  "description": "descrição clara e objetiva",
+  "priority": "high/medium/low",
+  "tags": ["tag1", "tag2"]
+}`
+
+const task = `{
+  "title": "Bug no login",
+  "description": "login não funciona",
+  "priority": "high",
+  "tags": ["bug"]
+}`
+
+const taskJson = JSON.parse(task);
+
+function createSystemPrompt() {
+  return `És um assistente de gestão de tarefas.
+Ajudas os utilizadores a criar, refinar e organizar tarefas de forma clara e profissional.
+Responde sempre em português e de forma concisa.`;
+}
+
 // Initialize Gemini AI
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
 // Gemini API helper function
-async function callGemini(userPrompt) {
+async function callGemini(userPrompt, temperature = 1, systemIntructions = createSystemPrompt()) {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }]
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      config: {temperature},
+      systemInstruction: {systemIntructions}
     });
     
     return response.candidates[0].content.parts[0].text;
@@ -43,15 +70,7 @@ app.use(express.json());
 async function createTaskFromText(text) {
   const prompt = `Transforma o seguinte texto em uma tarefa estruturada no formato JSON. Responde apenas com o JSON, sem texto adicional.
 
-Texto: "${text}"
-
-Retorna o JSON neste formato:
-{
-  "title": "título conciso e profissional",
-  "description": "descrição clara e objetiva",
-  "priority": "high/medium/low",
-  "tags": ["tag1", "tag2"]
-}`;
+Texto: "${text}, ${jsonFormat}" `;
 
   try {
     const response = await callGemini(prompt);
@@ -68,6 +87,90 @@ Retorna o JSON neste formato:
       tags: ["ia"]
     };
   }
+}
+
+async function refineTask(task) {
+  const prompt = `Melhora a tarefa existente tornando-a mais clara, completa e profissional. ${jsonFormat} `
+
+  try {
+    const response = await callGemini(prompt);
+    const cleanedResponse = response.replace(/```json\n?|```/g, '').trim();
+    console.log('Gemini Response:', cleanedResponse);
+    return JSON.parse(cleanedResponse);
+  } catch (error) {
+    console.error('Error in refineTask:', error);
+    // Fallback to simple processing
+    return {
+      title: "Tarefa refinada via IA",
+      description: "text",
+      priority: "medium",
+      tags: ["ia"]
+    };
+  }
+}
+
+async function summarizeTask(task) {
+  const prompt = `Resume a description se for longa em uma frase simples e objetiva para facilitar leitura rápida. ${jsonFormat}`
+
+  try {
+    const response = await callGemini(prompt);
+    const cleanedResponse = response.replace(/```json\n?|```/g, '').trim();
+    console.log('Gemini Response:', cleanedResponse);
+    return JSON.parse(cleanedResponse);
+  } catch (error) {
+    console.error('Error in summarizeTask:', error);
+    // Fallback to simple processing
+    return {
+      title: "Description sumarizada via IA",
+      description: "text",
+      priority: "medium",
+      tags: ["ia"]
+    };
+  }
+}
+
+async function suggestTags(task) {
+  const prompt = `Analisa a tarefa e sugere tags relevantes. ${jsonFormat}`
+
+  try {
+    const response = await callGemini(prompt);
+    const cleanedResponse = response.replace(/```json\n?|```/g, '').trim();
+    console.log('Gemini Response:', cleanedResponse);
+    return JSON.parse(cleanedResponse);
+  } catch (error) {
+    console.error('Error in suggestTags:', error);
+    // Fallback to simple processing
+    return {
+      title: "Suggests tags via IA",
+      description: "text",
+      priority: "medium",
+      tags: ["ia"]
+    };
+  }
+}
+
+async function classifyPriority(task) {
+  const prompt = `Classifica a prioridade da tarefa com base nos exemplos abaixo. Responde apenas com: Alta, Média ou Baixa.
+    Exemplos:
+    "site caiu" -> Alta
+    "mudar botão" -> Média
+    "trocar favicon" -> Baixa
+
+Tarefa: "${task}. NOTA:${jsonFormat}`;
+
+  const result = await callGemini(prompt);
+  return result.trim();
+}
+
+async function generateNames(temperature){
+    const prompt = `Gera 5 nomes de pessoas aleatoriamente.`
+    if (temperature < 2 && temperature >= 0){
+        const response = await callGemini(prompt);
+        const cleanedResponse = response.replace(/```json\n?|```/g, '').trim();
+        return JSON.parse(cleanedResponse);
+    }else{
+        return 'Valor tem que ser entre 0.1 e 2'
+    }
 }
 
 // API Routes
