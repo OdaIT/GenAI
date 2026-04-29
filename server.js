@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
+import { jsonFormat, createSystemPrompt } from './src/utils/geminiConfigs.js';
 
 dotenv.config();
 
@@ -14,15 +15,6 @@ if (!process.env.GEMINI_API_KEY) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-//formato JSON
-const jsonFormat =`
-  Retorna o JSON neste formato:
-{
-  "title": "título conciso e profissional",
-  "description": "descrição clara e objetiva",
-  "priority": "high/medium/low",
-  "tags": ["tag1", "tag2"]
-}`
 
 const task = `{
   "title": "Bug no login",
@@ -33,11 +25,6 @@ const task = `{
 
 const taskJson = JSON.parse(task);
 
-function createSystemPrompt() {
-  return `És um assistente de gestão de tarefas.
-Ajudas os utilizadores a criar, refinar e organizar tarefas de forma clara e profissional.
-Responde sempre em português e de forma concisa.`;
-}
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({
@@ -48,7 +35,7 @@ const ai = new GoogleGenAI({
 async function callGemini(userPrompt, temperature = 1, systemIntructions = createSystemPrompt()) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite-preview",
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
       config: {temperature},
       systemInstruction: {systemIntructions}
@@ -235,7 +222,7 @@ app.post('/api/tasks/refine', async (req, res) => {
     }
 });
 
-app.post('/api/tasks/suggest-tags', async (req, res) => {
+app.post('/api/tasks/suggesttags', async (req, res) => {
     try {
         const { text } = req.body;
 
@@ -252,7 +239,7 @@ app.post('/api/tasks/suggest-tags', async (req, res) => {
             data: tags
         });
     } catch (error) {
-        console.error('Error in /api/tasks/suggest-tags:', error);
+        console.error('Error in /api/tasks/suggesttags:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -290,7 +277,7 @@ app.post('/api/tasks/summarize', async (req, res) => {
 app.get('/', (req, res) => {
     res.status(200).json({
         success: true,
-        message: 'AI Task System API',
+        message: 'AI Task System API M7',
         endpoints: [
             'POST /api/tasks/create - Create task from text',
             'POST /api/tasks/refine - Refine existing task',
