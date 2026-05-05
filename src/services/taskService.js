@@ -1,3 +1,7 @@
+import { callGemini } from './geminiService.js';
+import { jsonFormat } from '../utils/geminiConfigs.js';
+import getChatHistory from './chatHistoryService.js';
+
 async function createTaskFromText(text) {
   const prompt = `Transforma o seguinte texto em uma tarefa estruturada no formato JSON. Responde apenas com o JSON, sem texto adicional.
 
@@ -104,4 +108,14 @@ async function generateNames(temperature){
     }
 }
 
-export { createTaskFromText, refineTask, summarizeTask, suggestTags, classifyPriority, generateNames}
+async function generateResume(history, previousResumes){
+    const previousContext = previousResumes.length > 0
+        ? `Estes são os resumos anteriores:\n${previousResumes.join('\n')}\n\n`
+        : '';
+    const prompt = `${previousContext}Gera um resumo do historico de mensagens abaixo:\n${history.map(msg => `${msg.user}: ${msg.bot}`).join('\n')}`;
+    const response = await callGemini(prompt);
+    return response.trim();
+}
+
+
+export { createTaskFromText, refineTask, summarizeTask, suggestTags, classifyPriority, generateNames, generateResume}
